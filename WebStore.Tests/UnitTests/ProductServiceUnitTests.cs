@@ -1,4 +1,5 @@
 using WebStore.DAL.EF;
+using WebStore.Model.DataModels;
 using WebStore.Services.Interfaces;
 using WebStore.ViewModels.VM;
 
@@ -75,6 +76,126 @@ namespace WebStore.Tests.UnitTests
             Assert.NotNull(editedProductVm);
             Assert.Equal("Monitor Dell 32", editedProductVm.Name);
             Assert.Equal(2000, editedProductVm.Price);
+        }
+
+        [Fact]
+        public void DeleteProductTest()
+        {
+            var productToDelete = new Product()
+            {
+                Name = "Klawiatura do usunięcia",
+                CategoryId = 1,
+                SupplierId = 1,
+                ImageBytes = new byte[] { 0xff, 0xff, 0xff, 0x60 },
+                Price = 150,
+                Weight = 0.8f,
+                Description = "Klawiatura mechaniczna",
+                ProductStocks = new List<ProductStock> { new ProductStock() { Quantity = 5 } }
+            };
+            DbContext.Products.Add(productToDelete);
+            DbContext.SaveChanges();
+            var productId = productToDelete.Id;
+
+            _productService.DeleteProduct(productId);
+
+            Assert.False(DbContext.Products.Any(p => p.Id == productId));
+            Assert.False(DbContext.ProductStocks.Any(ps => ps.ProductId == productId));
+        }
+
+        [Fact]
+        public void DeleteNotExistingProductThrowsTest()
+        {
+            Assert.Throws<KeyNotFoundException>(() => _productService.DeleteProduct(int.MaxValue));
+        }
+
+        [Fact]
+        public void DeleteProductUsedInOrderThrowsTest()
+        {
+            var orderProductsCountBefore = DbContext.OrderProducts.Count(op => op.ProductId == 1);
+            Assert.True(orderProductsCountBefore > 0);
+
+            var exception = Assert.Throws<InvalidOperationException>(() => _productService.DeleteProduct(1));
+
+            Assert.Equal("Nie można usunąć produktu, ponieważ występuje w zamówieniach.", exception.Message);
+            Assert.IsType<InvalidOperationException>(exception.InnerException);
+            DbContext.ChangeTracker.Clear();
+            Assert.True(DbContext.Products.Any(p => p.Id == 1));
+            Assert.Equal(orderProductsCountBefore, DbContext.OrderProducts.Count(op => op.ProductId == 1));
+        }
+
+        [Theory]
+        [InlineData(int.MaxValue, 1, "Nie znaleziono kategorii o Id 2147483647.")]
+        [InlineData(1, int.MaxValue, "Nie znaleziono dostawcy o Id 2147483647.")]
+        public void AddProductWithNotExistingRelatedEntityThrowsTest(int categoryId, int supplierId, string expectedMessage)
+        {
+            var productsCountBefore = DbContext.Products.Count();
+            var productVm = CreateProductVm("Produkt bez powiązań");
+            productVm.CategoryId = categoryId;
+            productVm.SupplierId = supplierId;
+
+            var exception = Assert.Throws<ArgumentException>(() => _productService.AddOrUpdateProduct(productVm));
+
+            Assert.Equal(expectedMessage, exception.Message);
+            Assert.Equal(productsCountBefore, DbContext.Products.Count());
+        }
+
+        [Theory]
+        [InlineData(int.MaxValue, 1)]
+        [InlineData(1, int.MaxValue)]
+        public void UpdateProductWithNotExistingRelatedEntityThrowsTest(int categoryId, int supplierId)
+        {
+            var createdProduct = new Product()
+            {
+                Name = "Produkt przed edycją",
+                CategoryId = 1,
+                SupplierId = 1,
+                ImageBytes = new byte[] { 0xff, 0xff, 0xff, 0x40 },
+                Price = 300,
+                Weight = 0.4f,
+                Description = "Produkt testowy"
+            };
+            DbContext.Products.Add(createdProduct);
+            DbContext.SaveChanges();
+            var productVm = CreateProductVm("Produkt po edycji");
+            productVm.Id = createdProduct.Id;
+            productVm.CategoryId = categoryId;
+            productVm.SupplierId = supplierId;
+
+            Assert.Throws<ArgumentException>(() => _productService.AddOrUpdateProduct(productVm));
+
+            DbContext.ChangeTracker.Clear();
+            var product = DbContext.Products.Single(p => p.Id == createdProduct.Id);
+            Assert.Equal("Produkt przed edycją", product.Name);
+            Assert.Equal(1, product.CategoryId);
+            Assert.Equal(1, product.SupplierId);
+        }
+
+        [Fact]
+        public void AddProductWithoutRequiredValuesThrowsTest()
+        {
+            var productsCountBefore = DbContext.Products.Count();
+            var productVm = CreateProductVm("Produkt bez ceny");
+            productVm.Price = null;
+            productVm.CategoryId = null;
+
+            var exception = Assert.Throws<ArgumentException>(() => _productService.AddOrUpdateProduct(productVm));
+
+            Assert.Equal("Brak wymaganych danych: cena, kategoria.", exception.Message);
+            Assert.Equal(productsCountBefore, DbContext.Products.Count());
+        }
+
+        private static AddOrUpdateProductVm CreateProductVm(string name)
+        {
+            return new AddOrUpdateProductVm()
+            {
+                Name = name,
+                CategoryId = 1,
+                SupplierId = 1,
+                ImageBytes = new byte[] { 0xff, 0xff, 0xff, 0x50 },
+                Price = 300,
+                Weight = 0.4f,
+                Description = "Produkt testowy"
+            };
         }
     }
 }

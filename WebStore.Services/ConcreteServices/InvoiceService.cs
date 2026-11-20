@@ -22,6 +22,10 @@ namespace WebStore.Services.ConcreteServices
                 if (addOrUpdateInvoiceVm == null)
                     throw new ArgumentNullException(nameof(addOrUpdateInvoiceVm), "Parametr view modelu jest pusty (null).");
 
+                EnsureRequiredValues(
+                    (addOrUpdateInvoiceVm.IssueDate, "data wystawienia"),
+                    (addOrUpdateInvoiceVm.TotalAmount, "kwota"));
+
                 Invoice invoiceEntity;
                 if (addOrUpdateInvoiceVm.Id is null or 0)
                 {

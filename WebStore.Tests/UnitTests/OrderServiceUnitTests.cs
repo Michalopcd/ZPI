@@ -137,6 +137,46 @@ namespace WebStore.Tests.UnitTests
             Assert.Equal(order.OrderProducts.Sum(op => op.Quantity * op.ProductPrice), order.TotalAmount);
         }
 
+        [Fact]
+        public void AddOrderWithNotExistingCustomerThrowsTest()
+        {
+            var ordersCountBefore = DbContext.Orders.Count();
+            var orderVm = CreateOrderVm(2000000101);
+            orderVm.CustomerId = int.MaxValue;
+
+            var exception = Assert.Throws<ArgumentException>(() => _orderService.AddOrUpdateOrder(orderVm));
+
+            Assert.Equal($"Nie znaleziono klienta o Id {int.MaxValue}.", exception.Message);
+            Assert.Equal(ordersCountBefore, DbContext.Orders.Count());
+        }
+
+        [Fact]
+        public void UpdateOrderWithNotExistingCustomerThrowsTest()
+        {
+            var createdOrder = _orderService.AddOrUpdateOrder(CreateOrderVm(2000000102));
+            var orderVm = CreateOrderVm(2000000103);
+            orderVm.Id = createdOrder.Id;
+            orderVm.CustomerId = int.MaxValue;
+
+            Assert.Throws<ArgumentException>(() => _orderService.AddOrUpdateOrder(orderVm));
+
+            DbContext.ChangeTracker.Clear();
+            var order = DbContext.Orders.Single(o => o.Id == createdOrder.Id);
+            Assert.Equal(2, order.CustomerId);
+            Assert.Equal(2000000102, order.TrackingNumber);
+        }
+
+        [Fact]
+        public void AddOrderWithoutRequiredValuesThrowsTest()
+        {
+            var ordersCountBefore = DbContext.Orders.Count();
+
+            var exception = Assert.Throws<ArgumentException>(() => _orderService.AddOrUpdateOrder(new AddOrUpdateOrderVm()));
+
+            Assert.Equal("Brak wymaganych danych: klient, data zamówienia, data dostawy, numer przesyłki.", exception.Message);
+            Assert.Equal(ordersCountBefore, DbContext.Orders.Count());
+        }
+
         private static AddOrUpdateOrderVm CreateOrderVm(long trackingNumber)
         {
             return new AddOrUpdateOrderVm()

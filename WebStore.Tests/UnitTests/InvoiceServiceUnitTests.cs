@@ -147,6 +147,24 @@ namespace WebStore.Tests.UnitTests
             return order.Id;
         }
 
+        [Fact]
+        public void UpdateInvoiceWithoutRequiredValuesThrowsTest()
+        {
+            var createdInvoice = _invoiceService.AddOrUpdateInvoice(CreateInvoiceVm("FV/TEST/0101"));
+            var updateInvoiceVm = CreateInvoiceVm("FV/TEST/0102");
+            updateInvoiceVm.Id = createdInvoice.Id;
+            updateInvoiceVm.IssueDate = null;
+            updateInvoiceVm.TotalAmount = null;
+
+            var exception = Assert.Throws<ArgumentException>(() => _invoiceService.AddOrUpdateInvoice(updateInvoiceVm));
+
+            Assert.Equal("Brak wymaganych danych: data wystawienia, kwota.", exception.Message);
+            DbContext.ChangeTracker.Clear();
+            var invoice = DbContext.Invoices.Single(i => i.Id == createdInvoice.Id);
+            Assert.Equal("FV/TEST/0101", invoice.InvoiceNumber);
+            Assert.Equal(100, invoice.TotalAmount);
+        }
+
         private static AddOrUpdateInvoiceVm CreateInvoiceVm(string invoiceNumber)
         {
             return new AddOrUpdateInvoiceVm()

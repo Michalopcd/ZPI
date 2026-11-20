@@ -6,21 +6,21 @@ namespace WebStore.ViewModels.VM
     {
         public int? Id { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Ulica jest wymagana.")]
         public string Street { get; set; } = default!;
 
-        [Required]
+        [Required(ErrorMessage = "Numer budynku jest wymagany.")]
         public string BuildingNumber { get; set; } = default!;
 
         public string? ApartmentNumber { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Kod pocztowy jest wymagany.")]
         public string PostalCode { get; set; } = default!;
 
-        [Required]
+        [Required(ErrorMessage = "Miasto jest wymagane.")]
         public string City { get; set; } = default!;
 
-        [Required]
+        [Required(ErrorMessage = "Kraj jest wymagany.")]
         public string Country { get; set; } = default!;
 
         public int? CustomerId { get; set; }

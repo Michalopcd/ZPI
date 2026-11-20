@@ -137,6 +137,8 @@ namespace WebStore.Services.ConcreteServices
 
                 var storeEntity = DbContext.StationaryStores.Find(stationaryStoreId)
                     ?? throw new KeyNotFoundException($"Nie znaleziono sklepu o Id {stationaryStoreId}.");
+                if (addressVm.CustomerId != null && !DbContext.Customers.Any(c => c.Id == addressVm.CustomerId))
+                    throw new ArgumentException($"Nie znaleziono klienta o Id {addressVm.CustomerId}.");
 
                 var addressEntity = Mapper.Map<Address>(addressVm);
                 addressEntity.StationaryStoreId = storeEntity.Id;

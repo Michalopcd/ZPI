@@ -16,5 +16,12 @@ namespace WebStore.Services.ConcreteServices
             Logger = logger;
             Mapper = mapper;
         }
+
+        protected static void EnsureRequiredValues(params (object? Value, string Description)[] fields)
+        {
+            var missingFields = fields.Where(f => f.Value == null).Select(f => f.Description).ToList();
+            if (missingFields.Count > 0)
+                throw new ArgumentException($"Brak wymaganych danych: {string.Join(", ", missingFields)}.");
+        }
     }
 }

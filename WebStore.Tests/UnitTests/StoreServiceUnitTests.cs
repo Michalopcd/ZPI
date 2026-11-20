@@ -142,6 +142,20 @@ namespace WebStore.Tests.UnitTests
             Assert.Throws<ArgumentNullException>(() => _storeService.AddAddressToStore(1, null!));
         }
 
+        [Fact]
+        public void AddAddressWithNotExistingCustomerToStoreThrowsTest()
+        {
+            var createdStore = _storeService.AddOrUpdateStore(new AddOrUpdateStoreVm() { Name = "WebStore Rybnik" });
+            var addressVm = CreateAddressVm();
+            addressVm.CustomerId = int.MaxValue;
+
+            var exception = Assert.Throws<ArgumentException>(() => _storeService.AddAddressToStore(createdStore.Id, addressVm));
+
+            Assert.Equal($"Nie znaleziono klienta o Id {int.MaxValue}.", exception.Message);
+            DbContext.ChangeTracker.Clear();
+            Assert.False(DbContext.Addresses.Any(a => a.StationaryStoreId == createdStore.Id));
+        }
+
         private static AddOrUpdateAddressVm CreateAddressVm()
         {
             return new AddOrUpdateAddressVm()

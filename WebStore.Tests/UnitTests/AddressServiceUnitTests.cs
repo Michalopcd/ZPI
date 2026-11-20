@@ -111,6 +111,42 @@ namespace WebStore.Tests.UnitTests
             Assert.Contains(addresses, a => a.Id == 3);
         }
 
+        [Theory]
+        [InlineData(int.MaxValue, null, "Nie znaleziono klienta o Id 2147483647.")]
+        [InlineData(null, int.MaxValue, "Nie znaleziono sklepu o Id 2147483647.")]
+        public void AddAddressWithNotExistingRelatedEntityThrowsTest(int? customerId, int? stationaryStoreId, string expectedMessage)
+        {
+            var addressesCountBefore = DbContext.Addresses.Count();
+            var addressVm = CreateAddressVm("Bez powiązań");
+            addressVm.CustomerId = customerId;
+            addressVm.StationaryStoreId = stationaryStoreId;
+
+            var exception = Assert.Throws<ArgumentException>(() => _addressService.AddOrUpdateAddress(addressVm));
+
+            Assert.Equal(expectedMessage, exception.Message);
+            Assert.Equal(addressesCountBefore, DbContext.Addresses.Count());
+        }
+
+        [Theory]
+        [InlineData(int.MaxValue, null)]
+        [InlineData(null, int.MaxValue)]
+        public void UpdateAddressWithNotExistingRelatedEntityThrowsTest(int? customerId, int? stationaryStoreId)
+        {
+            var createdAddress = _addressService.AddOrUpdateAddress(CreateAddressVm("Przed edycją"));
+            var addressVm = CreateAddressVm("Po edycji");
+            addressVm.Id = createdAddress.Id;
+            addressVm.CustomerId = customerId;
+            addressVm.StationaryStoreId = stationaryStoreId;
+
+            Assert.Throws<ArgumentException>(() => _addressService.AddOrUpdateAddress(addressVm));
+
+            DbContext.ChangeTracker.Clear();
+            var address = DbContext.Addresses.Single(a => a.Id == createdAddress.Id);
+            Assert.Equal("Przed edycją", address.Street);
+            Assert.Equal(2, address.CustomerId);
+            Assert.Null(address.StationaryStoreId);
+        }
+
         private static AddOrUpdateAddressVm CreateAddressVm(string street)
         {
             return new AddOrUpdateAddressVm()

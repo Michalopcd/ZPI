@@ -22,9 +22,16 @@ namespace WebStore.Services.ConcreteServices
                 if (addOrUpdateOrderVm == null)
                     throw new ArgumentNullException(nameof(addOrUpdateOrderVm), "Parametr view modelu jest pusty (null).");
 
+                EnsureRequiredValues(
+                    (addOrUpdateOrderVm.CustomerId, "klient"),
+                    (addOrUpdateOrderVm.OrderDate, "data zamówienia"),
+                    (addOrUpdateOrderVm.DeliveryDate, "data dostawy"),
+                    (addOrUpdateOrderVm.TrackingNumber, "numer przesyłki"));
+
                 Order orderEntity;
                 if (addOrUpdateOrderVm.Id is null or 0)
                 {
+                    EnsureCustomerExists(addOrUpdateOrderVm.CustomerId!.Value);
                     orderEntity = Mapper.Map<Order>(addOrUpdateOrderVm);
                     DbContext.Orders.Add(orderEntity);
                 }
@@ -32,6 +39,7 @@ namespace WebStore.Services.ConcreteServices
                 {
                     orderEntity = DbContext.Orders.Find(addOrUpdateOrderVm.Id.Value)
                         ?? throw new KeyNotFoundException($"Nie znaleziono zamówienia o Id {addOrUpdateOrderVm.Id.Value}.");
+                    EnsureCustomerExists(addOrUpdateOrderVm.CustomerId!.Value);
                     Mapper.Map(addOrUpdateOrderVm, orderEntity);
                 }
 
@@ -137,6 +145,12 @@ namespace WebStore.Services.ConcreteServices
         public IEnumerable<OrderVm> GetCustomerOrders(int customerId)
         {
             return GetOrders(o => o.CustomerId == customerId);
+        }
+
+        private void EnsureCustomerExists(int customerId)
+        {
+            if (!DbContext.Customers.Any(c => c.Id == customerId))
+                throw new ArgumentException($"Nie znaleziono klienta o Id {customerId}.");
         }
     }
 }

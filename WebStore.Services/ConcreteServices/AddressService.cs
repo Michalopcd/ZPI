@@ -25,6 +25,7 @@ namespace WebStore.Services.ConcreteServices
                 Address addressEntity;
                 if (addOrUpdateAddressVm.Id is null or 0)
                 {
+                    EnsureRelatedEntitiesExist(addOrUpdateAddressVm);
                     addressEntity = Mapper.Map<Address>(addOrUpdateAddressVm);
                     DbContext.Addresses.Add(addressEntity);
                 }
@@ -32,6 +33,7 @@ namespace WebStore.Services.ConcreteServices
                 {
                     addressEntity = DbContext.Addresses.Find(addOrUpdateAddressVm.Id.Value)
                         ?? throw new KeyNotFoundException($"Nie znaleziono adresu o Id {addOrUpdateAddressVm.Id.Value}.");
+                    EnsureRelatedEntitiesExist(addOrUpdateAddressVm);
                     Mapper.Map(addOrUpdateAddressVm, addressEntity);
                 }
 
@@ -115,6 +117,14 @@ namespace WebStore.Services.ConcreteServices
         public IEnumerable<AddressVm> GetStoreAddresses(int stationaryStoreId)
         {
             return GetAddresses(a => a.StationaryStoreId == stationaryStoreId);
+        }
+
+        private void EnsureRelatedEntitiesExist(AddOrUpdateAddressVm addOrUpdateAddressVm)
+        {
+            if (addOrUpdateAddressVm.CustomerId != null && !DbContext.Customers.Any(c => c.Id == addOrUpdateAddressVm.CustomerId))
+                throw new ArgumentException($"Nie znaleziono klienta o Id {addOrUpdateAddressVm.CustomerId}.");
+            if (addOrUpdateAddressVm.StationaryStoreId != null && !DbContext.StationaryStores.Any(s => s.Id == addOrUpdateAddressVm.StationaryStoreId))
+                throw new ArgumentException($"Nie znaleziono sklepu o Id {addOrUpdateAddressVm.StationaryStoreId}.");
         }
     }
 }
